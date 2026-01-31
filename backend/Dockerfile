@@ -1,4 +1,9 @@
 FROM rust:1.83 as builder
+
+# Force cache invalidation - change this value to rebuild
+ARG CACHEBUST=20260131
+RUN echo "Cache bust: $CACHEBUST"
+
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir -p src && echo "fn main() {}" > src/main.rs
