@@ -341,6 +341,60 @@ Built with ❤️ for Solana Privacy Hackathon 2026
 
 ---
 
+## 🗺️ Roadmap
+
+### Phase 1: Complete Light Protocol Integration (Q1 2026)
+**Priority: High** - Finish what we architected during the hackathon
+- Implement full ZK proof verification for compressed token payments
+- Complete the Light Protocol rail with proper Merkle tree commitment parsing
+- Add compressed token account detection and balance checking
+- Deploy ZK circuits for privacy-preserving receipt verification
+- Achieve the 99.7% cost savings from compressed tokens
+
+### Phase 2: Enhanced Receipt System (Q2 2026)
+**Make privacy more powerful**
+- Add range proofs (prove "amount > X" without revealing exact amount)
+- Time-locked disclosure (reveal fields after specific timestamp)
+- Multi-merchant receipts (prove payment to any of N merchants)
+- Receipt revocation system for disputes
+- QR code receipts for mobile verification
+
+### Phase 3: Merchant Tools & Analytics (Q2-Q3 2026)
+**Scale to real businesses**
+- Bulk PayLink generation (CSV upload)
+- Payment analytics dashboard (volume, trends, conversion rates)
+- Webhook notifications to merchant systems
+- Public API with rate limiting and authentication
+- Invoice integration (QuickBooks, Xero)
+- Multi-currency support (USDC, EURC, other stablecoins)
+
+### Phase 4: Advanced Privacy Features (Q3-Q4 2026)
+**Push the boundaries**
+- Multi-hop payments (route through intermediaries for sender privacy)
+- Stealth addresses for merchant privacy
+- Mixer integration for untraceable payments
+- Private refunds (refund without revealing original payment)
+- Cross-chain receipts (Solana ↔ EVM bridges)
+
+### Phase 5: Platform & Ecosystem (2027)
+**Build the infrastructure**
+- White-label solution (merchants deploy their own instance)
+- Recurring payment links (subscriptions)
+- Escrow payments with arbitration
+- Point-of-sale integration (physical retail)
+- Mobile apps (iOS/Android)
+- Receipt NFTs (provable payment badges)
+- Developer SDK for third-party integrations
+
+### Ongoing Improvements
+- Performance optimization (reduce webhook latency)
+- Security audits (smart contract and backend)
+- Compliance tools (optional KYC for regulated merchants)
+- Multi-language support
+- Customer support portal
+
+---
+
 ## 📄 License
 
 MIT License - Open source and free to use
