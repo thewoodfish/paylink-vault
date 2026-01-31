@@ -1,4 +1,4 @@
-FROM rust:1.83 as builder
+FROM rust:latest as builder
 
 # Force cache invalidation - change this value to rebuild
 ARG CACHEBUST=20260131
