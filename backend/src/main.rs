@@ -7,9 +7,8 @@ mod privacy;
 mod routes;
 mod util;
 
+use app::AppState;
 use dotenvy::dotenv;
-use std::net::SocketAddr;
-use axum::{routing::get, Router};
 
 #[tokio::main]
 async fn main() -> Result<(), error::AppError> {
@@ -19,61 +18,33 @@ async fn main() -> Result<(), error::AppError> {
 
     let config = config::Config::from_env();
     println!("📋 Config loaded");
-    println!("   Database URL: {}", if config.database_url.is_empty() { "❌ NOT SET" } else { "✅ SET" });
     println!("   Port: {}", config.port);
     println!("   Cluster: {}", config.helius_cluster);
 
-    // START SERVER FIRST - before any DB operations
-    let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
-    println!("🌐 Starting HTTP server IMMEDIATELY on {}", addr);
+    println!("🔌 Connecting to database...");
+    let db = db::connect(&config.database_url).await.map_err(|e| {
+        eprintln!("❌ Database connection failed: {}", e);
+        e
+    })?;
+    println!("✅ Database connected");
 
-    let app = Router::new()
-        .route("/health", get(|| async {
-            println!("Health check received!");
-            "ok - server is running"
-        }))
-        .route("/", get(|| async {
-            "Receiptless Backend - Server Running (check /health)"
-        }));
+    println!("🔄 Running migrations...");
+    sqlx::migrate!("./migrations").run(&db).await.map_err(|e| {
+        eprintln!("❌ Migration failed: {}", e);
+        e
+    })?;
+    println!("✅ Migrations complete");
 
-    let listener = tokio::net::TcpListener::bind(addr).await
-        .map_err(|e| {
-            eprintln!("❌ Failed to bind to {}: {}", addr, e);
-            error::AppError::Other(format!("Failed to bind: {}", e))
-        })?;
+    let http = reqwest::Client::new();
+    let rail = privacy::rail::RailSelector::new(&config.privacy_rail);
 
-    println!("✅ HTTP SERVER IS LISTENING on {}", addr);
-    println!("   Health check endpoint: http://0.0.0.0:{}/health", addr.port());
+    let state = AppState {
+        db,
+        http,
+        config,
+        rail,
+    };
 
-    // Now try DB connection (after server is already running)
-    println!("🔌 Now attempting database connection...");
-    println!("   DB URL (first 30 chars): {}...",
-        if config.database_url.len() > 30 {
-            &config.database_url[..30]
-        } else {
-            &config.database_url
-        }
-    );
-
-    match db::connect(&config.database_url).await {
-        Ok(_db) => {
-            println!("✅ Database connected successfully!");
-            println!("   (But server already started - continuing with simple mode)");
-        }
-        Err(e) => {
-            eprintln!("❌ Database connection failed: {}", e);
-            eprintln!("   Error type: {:?}", e);
-            eprintln!("   Server is still running for debugging");
-        }
-    }
-
-    println!("🎯 Starting server loop...");
-    axum::serve(listener, app).await
-        .map_err(|e| {
-            eprintln!("❌ Server error: {}", e);
-            error::AppError::Other(format!("Server error: {}", e))
-        })?;
-
-    println!("Server stopped");
-    Ok(())
+    println!("🌐 Starting HTTP server...");
+    app::run(state).await
 }
