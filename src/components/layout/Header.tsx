@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
+import { isDemoMode } from '@/lib/mockData';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -37,10 +38,12 @@ export function Header({ onMenuClick, showMenu }: HeaderProps) {
           </span>
         </Link>
 
-        {/* Demo mode badge */}
-        <div className="ml-4 px-2 py-0.5 rounded-full bg-warning/20 text-warning text-xs font-medium border border-warning/30">
-          Demo Mode
-        </div>
+        {/* Demo mode badge - only show in actual demo mode */}
+        {isDemoMode() && (
+          <div className="ml-4 px-2 py-0.5 rounded-full bg-warning/20 text-warning text-xs font-medium border border-warning/30">
+            Demo Mode
+          </div>
+        )}
 
         {/* Spacer */}
         <div className="flex-1" />
