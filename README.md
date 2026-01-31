@@ -351,9 +351,8 @@ npm run dev  # Frontend (port 8080)
 Built with ❤️ for Solana Privacy Hackathon 2026
 
 **Contact:**
-- GitHub: [Repo link]
-- Twitter: [@YourHandle]
-- Email: [Your email]
+- Twitter: [@thewoodfish]
+- Email: [jasonholt2002@gmail.com]
 
 ---
 
