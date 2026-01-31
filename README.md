@@ -11,22 +11,6 @@ Privacy-preserving payment links on Solana with selective disclosure receipts po
 
 ---
 
-## 🎯 Tracks
-
-### 1. Best Privacy Project with Helius ⭐
-- ✅ Helius Enhanced Transactions API
-- ✅ Helius Webhooks for real-time payment detection
-- ✅ Helius Priority Fee API
-- ✅ Full RPC integration
-
-### 2. Open Track - Light Protocol Pool ⭐
-- ✅ Light Protocol ZK Compression SDK integrated
-- ✅ Compressed token support architecture
-- ✅ Privacy rails for extensibility
-- ✅ Production-ready codebase
-
----
-
 ## 🚀 What We Built
 
 A complete payment infrastructure that solves **merchant privacy** problems on Solana by combining:
@@ -288,61 +272,6 @@ npm run dev  # Frontend (port 8080)
 
 ## 🚀 Roadmap
 
-### Phase 1: Hackathon (✅ Complete)
-- Light Protocol integration
-- Helius webhook automation
-- Selective disclosure UI
-- Database + API
-
-### Phase 2: Beta (Next 30 days)
-- Mainnet deployment
-- Wallet integration (Phantom, Solflare)
-- Enhanced UX/UI
-- Mobile responsiveness
-
-### Phase 3: Launch (60-90 days)
-- Advanced ZK circuits
-- Multi-token support
-- Payment streaming
-- Analytics dashboard
-
-### Phase 4: Scale (6 months)
-- Enterprise features
-- Compliance tools
-- SDK for developers
-- Mobile app
-
----
-
-## 📚 Documentation
-
-- `README.md` → Setup and usage
-- `LIGHT_PROTOCOL_INTEGRATION.md` → Full technical details
-- `backend/README.md` → Backend API documentation
-
----
-
-## 👥 Team
-
-Built with ❤️ for Solana Privacy Hackathon 2026
-
-**Contact:**
-- Twitter: [@thewoodfish]
-- Email: [jasonholt2002@gmail.com]
-
----
-
-## 🙏 Acknowledgments
-
-- **Light Protocol**: For ZK compression infrastructure
-- **Helius**: For developer tooling and webhooks
-- **Solana Foundation**: For the hackathon opportunity
-- **Open Source Community**: shadcn/ui, Axum, and all dependencies
-
----
-
-## 🗺️ Roadmap
-
 ### Phase 1: Complete Light Protocol Integration (Q1 2026)
 **Priority: High** - Finish what we architected during the hackathon
 - Implement full ZK proof verification for compressed token payments
@@ -392,6 +321,33 @@ Built with ❤️ for Solana Privacy Hackathon 2026
 - Compliance tools (optional KYC for regulated merchants)
 - Multi-language support
 - Customer support portal
+
+---
+
+## 📚 Documentation
+
+- `README.md` → Setup and usage
+- `LIGHT_PROTOCOL_INTEGRATION.md` → Full technical details
+- `backend/README.md` → Backend API documentation
+
+---
+
+## 👥 Team
+
+Built with ❤️ for Solana Privacy Hackathon 2026
+
+**Contact:**
+- Twitter: [@thewoodfish]
+- Email: [jasonholt2002@gmail.com]
+
+---
+
+## 🙏 Acknowledgments
+
+- **Light Protocol**: For ZK compression infrastructure
+- **Helius**: For developer tooling and webhooks
+- **Solana Foundation**: For the hackathon opportunity
+- **Open Source Community**: shadcn/ui, Axum, and all dependencies
 
 ---
 
