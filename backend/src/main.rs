@@ -7,8 +7,9 @@ mod privacy;
 mod routes;
 mod util;
 
-use app::{AppState};
 use dotenvy::dotenv;
+use std::net::SocketAddr;
+use axum::{routing::get, Router};
 
 #[tokio::main]
 async fn main() -> Result<(), error::AppError> {
@@ -18,68 +19,64 @@ async fn main() -> Result<(), error::AppError> {
 
     let config = config::Config::from_env();
     println!("📋 Config loaded");
-    println!("   Database: {}", if config.database_url.is_empty() { "❌ NOT SET" } else { "✅ SET" });
+    println!("   Database URL: {}", if config.database_url.is_empty() { "❌ NOT SET" } else { "✅ SET" });
     println!("   Port: {}", config.port);
     println!("   Cluster: {}", config.helius_cluster);
 
-    // Start server WITHOUT database first (for debugging/tracing)
-    println!("⚠️  RUNNING IN DEBUG MODE - Server will start without DB");
-    println!("🌐 Starting HTTP server on port {}...", config.port);
+    // START SERVER FIRST - before any DB operations
+    let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
+    println!("🌐 Starting HTTP server IMMEDIATELY on {}", addr);
 
-    // Try to connect to DB in background, but don't fail if it doesn't work
-    println!("🔌 Attempting database connection...");
+    let app = Router::new()
+        .route("/health", get(|| async {
+            println!("Health check received!");
+            "ok - server is running"
+        }))
+        .route("/", get(|| async {
+            "Receiptless Backend - Server Running (check /health)"
+        }));
+
+    let listener = tokio::net::TcpListener::bind(addr).await
+        .map_err(|e| {
+            eprintln!("❌ Failed to bind to {}: {}", addr, e);
+            error::AppError::Other(format!("Failed to bind: {}", e))
+        })?;
+
+    println!("✅ HTTP SERVER IS LISTENING on {}", addr);
+    println!("   Health check endpoint: http://{}:{}/health",
+        if addr.ip().is_unspecified() { "0.0.0.0" } else { &addr.ip().to_string() },
+        addr.port()
+    );
+
+    // Now try DB connection (after server is already running)
+    println!("🔌 Now attempting database connection...");
+    println!("   DB URL (first 30 chars): {}...",
+        if config.database_url.len() > 30 {
+            &config.database_url[..30]
+        } else {
+            &config.database_url
+        }
+    );
+
     match db::connect(&config.database_url).await {
-        Ok(database) => {
-            println!("✅ Database connected");
-
-            println!("🔄 Running migrations...");
-            match sqlx::migrate!("./migrations").run(&database).await {
-                Ok(_) => println!("✅ Migrations complete"),
-                Err(e) => {
-                    eprintln!("⚠️  Migration failed (continuing anyway): {}", e);
-                    eprintln!("   App will start but database operations will fail");
-                }
-            }
-
-            let http = reqwest::Client::new();
-            let rail = privacy::rail::RailSelector::new(&config.privacy_rail);
-
-            let state = AppState {
-                db: database,
-                http,
-                config,
-                rail,
-            };
-
-            println!("✅ Server starting with database connection");
-            app::run(state).await
+        Ok(_db) => {
+            println!("✅ Database connected successfully!");
+            println!("   (But server already started - continuing with simple mode)");
         }
         Err(e) => {
-            eprintln!("⚠️  Database connection failed: {}", e);
-            eprintln!("   Starting server anyway for debugging...");
-            eprintln!("   All routes will return 503 errors");
-
-            // Start a minimal server just for health checks
-            use std::net::SocketAddr;
-            use axum::{routing::get, Router};
-
-            let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
-            println!("🌐 Starting minimal server on {}", addr);
-
-            let app = Router::new()
-                .route("/health", get(|| async { "ok - but no database" }))
-                .route("/", get(|| async { "Server running but database connection failed. Check logs." }));
-
-            let listener = tokio::net::TcpListener::bind(addr).await
-                .map_err(|e| error::AppError::Other(format!("Failed to bind: {}", e)))?;
-
-            println!("✅ Minimal server listening on {}", addr);
-            println!("   Visit http://localhost:{} to verify", config.port);
-
-            axum::serve(listener, app).await
-                .map_err(|e| error::AppError::Other(format!("Server error: {}", e)))?;
-
-            Ok(())
+            eprintln!("❌ Database connection failed: {}", e);
+            eprintln!("   Error type: {:?}", e);
+            eprintln!("   Server is still running for debugging");
         }
     }
+
+    println!("🎯 Starting server loop...");
+    axum::serve(listener, app).await
+        .map_err(|e| {
+            eprintln!("❌ Server error: {}", e);
+            error::AppError::Other(format!("Server error: {}", e))
+        })?;
+
+    println!("Server stopped");
+    Ok(())
 }
