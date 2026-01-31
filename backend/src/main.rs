@@ -32,7 +32,7 @@ async fn main() -> Result<(), error::AppError> {
     println!("🔄 Running migrations...");
     sqlx::migrate!("./migrations").run(&db).await.map_err(|e| {
         eprintln!("❌ Migration failed: {}", e);
-        error::AppError::Db(e)
+        e
     })?;
     println!("✅ Migrations complete");
 
