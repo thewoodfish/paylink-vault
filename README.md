@@ -6,6 +6,9 @@
 ## Tagline
 Privacy-preserving payment links on Solana with selective disclosure receipts powered by Light Protocol and Helius.
 
+## 🌐 Live Deployment
+**Production App**: [https://paylink-vault.vercel.app/](https://paylink-vault.vercel.app/)
+
 ---
 
 ## 🎯 Tracks
