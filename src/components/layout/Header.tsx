@@ -1,21 +1,7 @@
-import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Wallet, Copy, Settings, Check } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { CopyButton } from '@/components/ui/CopyButton';
-import { Identicon } from '@/components/ui/Identicon';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
-import { getMerchantPubkey, setMerchantPubkey } from '@/lib/merchant';
+import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -24,21 +10,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick, showMenu }: HeaderProps) {
   const location = useLocation();
-  const [pubkey, setPubkey] = useState(getMerchantPubkey());
-  const [inputPubkey, setInputPubkey] = useState(pubkey);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const isDashboard = location.pathname.startsWith('/dashboard');
-
-  const handleSavePubkey = () => {
-    setMerchantPubkey(inputPubkey);
-    setPubkey(inputPubkey);
-    setDialogOpen(false);
-  };
-
-  const shortenPubkey = (pk: string) => {
-    if (pk.length <= 12) return pk;
-    return `${pk.slice(0, 6)}...${pk.slice(-4)}`;
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -73,62 +45,8 @@ export function Header({ onMenuClick, showMenu }: HeaderProps) {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Wallet / Pubkey section */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              {pubkey ? (
-                <>
-                  <Identicon value={pubkey} size={20} />
-                  <span className="font-mono text-xs hidden sm:inline">
-                    {shortenPubkey(pubkey)}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Wallet className="h-4 w-4" />
-                  <span className="hidden sm:inline">Set Merchant</span>
-                </>
-              )}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Merchant Public Key</DialogTitle>
-              <DialogDescription>
-                Enter your Solana public key to use as merchant identity. This is stored locally in your browser.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="pubkey">Public Key</Label>
-                <Input
-                  id="pubkey"
-                  placeholder="Enter your Solana public key..."
-                  value={inputPubkey}
-                  onChange={(e) => setInputPubkey(e.target.value)}
-                  className="font-mono text-sm"
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSavePubkey}>
-                  Save
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {pubkey && (
-          <CopyButton value={pubkey} className="ml-1" />
-        )}
+        {/* Wallet Connect Button */}
+        <ConnectWalletButton />
 
         {/* Navigation links (landing page) */}
         {!isDashboard && (

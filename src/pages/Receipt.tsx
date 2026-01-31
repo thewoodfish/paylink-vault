@@ -28,7 +28,8 @@ import { PrivacyBadge } from '@/components/ui/PrivacyBadge';
 import { DetailsSkeleton } from '@/components/ui/LoadingSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { api } from '@/lib/api';
-import type { Receipt, ReceiptProof, ReceiptFieldPolicy } from '@/lib/types';
+import { mockReceipts, isDemoMode } from '@/lib/mockData';
+import type { Receipt, ReceiptFieldPolicy } from '@/lib/types';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -56,15 +57,28 @@ export default function ReceiptPage() {
 
   const fetchReceipt = async () => {
     setLoading(true);
+
+    // Check if demo mode and use mock data
+    if (isDemoMode()) {
+      const mockReceipt = mockReceipts.find(r => r.id === id);
+      if (mockReceipt) {
+        setReceipt(mockReceipt);
+        setDisclosedFields(mockReceipt.disclosedFields);
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Try real API
     const response = await api.getReceipt(id!);
-    
+
     if (response.error) {
       setError(response.error);
     } else if (response.data) {
       setReceipt(response.data);
       setDisclosedFields(response.data.disclosedFields);
     }
-    
+
     setLoading(false);
   };
 
@@ -73,24 +87,51 @@ export default function ReceiptPage() {
     setGeneratedProof(null);
   };
 
-  const generateProof = () => {
+  const generateProof = async () => {
     if (!receipt) return;
 
-    const proof: ReceiptProof = {
-      commitmentHash: receipt.commitmentHash,
-      disclosedFields: {
-        ...(disclosedFields.merchant && { merchant: receipt.merchantPubkey }),
-        ...(disclosedFields.amount && { amount: 10 }), // Mock value
-        ...(disclosedFields.token && { token: 'SOL' }),
-        ...(disclosedFields.timeWindow && { timeWindow: { start: Date.now() - 3600000, end: Date.now() } }),
-        ...(disclosedFields.invoiceRef && { invoiceRef: 'INV-001' }),
-        ...(disclosedFields.paylinkId && { paylinkId: receipt.paylinkId }),
-      },
-      signature: `sig_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`,
-      timestamp: Date.now(),
-    };
+    // Demo mode: generate mock proof
+    if (isDemoMode()) {
+      const revealedFields: any = {};
 
-    setGeneratedProof(JSON.stringify(proof, null, 2));
+      if (disclosedFields.merchant && receipt.proofData?.merchant) {
+        revealedFields.merchantPubkey = receipt.proofData.merchant;
+      }
+      if (disclosedFields.amount && receipt.proofData?.amount) {
+        revealedFields.amount = receipt.proofData.amount;
+      }
+      if (disclosedFields.token && receipt.proofData?.token) {
+        revealedFields.mint = receipt.proofData.token;
+      }
+      if (disclosedFields.timeWindow && receipt.proofData?.timestamp) {
+        revealedFields.timestamp = receipt.proofData.timestamp;
+      }
+      if (disclosedFields.invoiceRef && receipt.proofData?.invoiceRef) {
+        revealedFields.invoiceRef = receipt.proofData.invoiceRef;
+      }
+      if (disclosedFields.paylinkId) {
+        revealedFields.paylinkId = receipt.paylinkId;
+      }
+
+      const mockProof = {
+        commitment: receipt.commitmentHash,
+        nonce: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6',
+        revealed: revealedFields,
+      };
+
+      setGeneratedProof(JSON.stringify(mockProof, null, 2));
+      toast.success('Proof generated!');
+      return;
+    }
+
+    // Try real API
+    const response = await api.getReceiptProof(receipt.id, disclosedFields);
+    if (response.error || !response.data) {
+      toast.error(response.error || 'Failed to generate proof');
+      return;
+    }
+
+    setGeneratedProof(JSON.stringify(response.data.proof, null, 2));
     toast.success('Proof generated!');
   };
 
@@ -124,6 +165,23 @@ export default function ReceiptPage() {
   }
 
   if (error || !receipt) {
+    const demoReceiptLinks = isDemoMode() ? (
+      <div className="mt-6 space-y-2">
+        <p className="text-sm font-medium">Try these demo receipts:</p>
+        <div className="flex flex-wrap gap-2">
+          {mockReceipts.map((mockReceipt) => (
+            <Link
+              key={mockReceipt.id}
+              to={`/receipt/${mockReceipt.id}`}
+              className="text-sm text-primary hover:underline"
+            >
+              {mockReceipt.id}
+            </Link>
+          ))}
+        </div>
+      </div>
+    ) : null;
+
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
@@ -133,6 +191,7 @@ export default function ReceiptPage() {
               title="Receipt not found"
               description={error || 'This receipt does not exist'}
             />
+            {demoReceiptLinks}
           </CardContent>
         </Card>
       </div>
@@ -142,6 +201,23 @@ export default function ReceiptPage() {
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
+        {/* Demo Mode Banner */}
+        {isDemoMode() && (
+          <Card className="border-warning/30 bg-warning/5">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 text-warning">ℹ️</div>
+                <div>
+                  <p className="font-medium text-sm">Demo Mode</p>
+                  <p className="text-sm text-muted-foreground">
+                    Viewing mock receipt data for demonstration. Connect real wallet and make payments to generate actual receipts.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Header */}
         <div className="text-center">
           <div className="inline-flex items-center gap-2 text-sm text-muted-foreground mb-2">

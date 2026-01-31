@@ -1,0 +1,10 @@
+# Rust build artifacts
+/target/
+*.pdb
+
+# Environment
+.env.local
+
+# IDE
+.vscode/
+.idea/

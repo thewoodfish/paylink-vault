@@ -1,14 +1,17 @@
 import { Link } from 'react-router-dom';
-import { 
-  ArrowRight, 
-  Shield, 
-  Zap, 
-  Link2, 
-  Receipt, 
+import {
+  ArrowRight,
+  Shield,
+  Zap,
+  Link2,
+  Receipt,
   CheckCircle,
   Github,
   ExternalLink,
   ChevronDown,
+  Lock,
+  DollarSign,
+  Layers,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
@@ -24,17 +27,17 @@ const steps = [
   {
     icon: Link2,
     title: 'Create PayLink',
-    description: 'Merchants generate a payment link with amount, token, and privacy settings.',
+    description: 'Generate a payment link with Light Protocol ZK Compression for 99.7% cost savings.',
   },
   {
     icon: Zap,
-    title: 'Instant Payment',
-    description: 'Payers open the link and pay privately on Solana with minimal on-chain footprint.',
+    title: 'Compressed Payment',
+    description: 'Pay with compressed tokens using zero-knowledge proofs. Only 128 bytes on-chain.',
   },
   {
     icon: Receipt,
     title: 'Selective Receipt',
-    description: 'Payers receive a receipt where they control exactly which fields to reveal.',
+    description: 'Get a cryptographic receipt where you control exactly which fields to reveal.',
   },
 ];
 
@@ -44,12 +47,12 @@ const benefits = [
     description: 'Reveal only the fields you need. Prove payment amount without exposing merchant identity.',
   },
   {
-    title: 'On-chain Verification',
-    description: 'Cryptographic proofs tied to Solana transactions. Verifiable by anyone, anywhere.',
+    title: 'ZK Compression Privacy',
+    description: 'Light Protocol stores account state as Merkle tree commitments instead of full data on-chain.',
   },
   {
-    title: 'Privacy by Default',
-    description: 'No personal data stored. No accounts required. Just payment and proof.',
+    title: '99.7% Cost Savings',
+    description: 'No rent required for compressed accounts. Constant 128-byte proof for unlimited payments.',
   },
 ];
 
@@ -60,7 +63,7 @@ const heliusFeatures = [
   },
   {
     title: 'Enhanced Transactions',
-    description: 'Rich transaction parsing for detailed payment verification.',
+    description: 'Rich transaction parsing for compressed token detection and verification.',
   },
   {
     title: 'Priority Fee API',
@@ -68,22 +71,43 @@ const heliusFeatures = [
   },
 ];
 
+const lightProtocolFeatures = [
+  {
+    icon: Lock,
+    title: 'Zero-Knowledge Proofs',
+    description: 'Account state stored as Merkle tree commitments. Privacy built into the protocol.',
+    stat: 'ZK Proof',
+  },
+  {
+    icon: DollarSign,
+    title: 'No Rent Required',
+    description: 'Compressed accounts eliminate storage costs. Pay once, use forever.',
+    stat: '99.7% Savings',
+  },
+  {
+    icon: Layers,
+    title: 'L1 Composability',
+    description: 'Full compatibility with Solana programs. Audited security guarantees.',
+    stat: '128 Bytes',
+  },
+];
+
 const faqs = [
   {
+    question: 'What is Light Protocol ZK Compression?',
+    answer: 'Light Protocol uses zero-knowledge proofs to compress Solana account data into Merkle tree commitments. Instead of storing full account state on-chain (which requires rent), only cryptographic hashes are stored. This reduces costs by 99.7% while maintaining L1 security and composability.',
+  },
+  {
     question: 'How does selective disclosure work?',
-    answer: 'When you receive a receipt, you can generate a cryptographic proof that reveals only specific fields (like amount or timestamp) while keeping others hidden. The proof is mathematically verifiable without exposing the hidden data.',
+    answer: 'When you receive a receipt, you can generate a cryptographic proof (SHA256 commitment + nonce) that reveals only specific fields like amount or timestamp while keeping others hidden. The proof is mathematically verifiable without exposing the concealed data.',
   },
   {
-    question: 'What tokens are supported?',
-    answer: 'Currently SOL and USDC are supported out of the box. Custom SPL tokens can be added by providing the mint address when creating a PayLink.',
+    question: 'What are the cost savings?',
+    answer: 'Regular SPL token accounts require ~0.002 SOL rent per account. Light Protocol compressed accounts require only ~0.000005 SOL for a constant 128-byte validity proof. For 1,000 payments, you save ~$199.50 (99.7% reduction).',
   },
   {
-    question: 'Is this production-ready?',
-    answer: 'This is a demo implementation. The UI is fully functional, but backend integration and cryptographic proof generation would need to be implemented for production use.',
-  },
-  {
-    question: 'How are payments verified?',
-    answer: 'Payments are verified on-chain using Helius webhooks and enhanced transaction parsing. The receipt system creates a cryptographic commitment that can be verified against the on-chain record.',
+    question: 'How are compressed payments verified?',
+    answer: 'Helius webhooks detect compressed token transactions. Our backend verifies the zero-knowledge validity proof (done on-chain by Light Protocol), matches the payment against PayLink requirements, and issues a cryptographic receipt with selective disclosure.',
   },
 ];
 
@@ -101,19 +125,34 @@ export default function Landing() {
           <div className="mx-auto max-w-3xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm text-primary mb-6">
               <Shield className="h-4 w-4" />
-              Privacy-first payments on Solana
+              Powered by Light Protocol ZK Compression
             </div>
-            
+
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl mb-6">
-              Private PayLinks +{' '}
-              <span className="gradient-text">Selective Disclosure</span>{' '}
-              Receipts
+              Privacy PayLinks with{' '}
+              <span className="gradient-text">99.7% Cost Savings</span>
             </h1>
-            
+
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Create payment links. Accept payments privately. Issue receipts where payers 
-              control exactly which fields to reveal. Powered by Solana and Helius.
+              Create payment links with Light Protocol ZK compression. Accept payments privately
+              with zero-knowledge proofs. Issue receipts with selective disclosure.
+              Built on Solana with Helius infrastructure.
             </p>
+
+            <div className="flex items-center justify-center gap-8 mb-8 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="text-muted-foreground">No rent required</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="text-muted-foreground">128-byte proofs</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="text-muted-foreground">Full L1 security</span>
+              </div>
+            </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild size="lg" className="glow-primary">
@@ -188,8 +227,45 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Helius features */}
+      {/* Light Protocol features */}
       <section className="py-20 border-t border-border">
+        <div className="container">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 text-primary mb-4">
+              <Shield className="h-5 w-5" />
+              <span className="font-semibold">Powered by Light Protocol</span>
+            </div>
+            <h2 className="text-3xl font-bold mb-4">ZK Compression for Privacy + Savings</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Zero-knowledge proofs compress Solana account data into Merkle tree commitments,
+              reducing costs by 99.7% while enhancing privacy
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {lightProtocolFeatures.map((feature) => (
+              <div
+                key={feature.title}
+                className="p-6 rounded-xl border border-primary/20 bg-primary/5 hover:border-primary/40 transition-colors group"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <feature.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <span className="text-xs font-mono bg-primary/10 px-2 py-1 rounded">
+                    {feature.stat}
+                  </span>
+                </div>
+                <h3 className="font-semibold mb-2">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Helius features */}
+      <section className="py-20 bg-muted/30">
         <div className="container">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 text-[#fe5f00] mb-4">
@@ -198,7 +274,7 @@ export default function Landing() {
             </div>
             <h2 className="text-3xl font-bold mb-4">Infrastructure-Grade Reliability</h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Built on Helius for instant webhooks, enhanced parsing, and smart fee estimation
+              Built on Helius for instant webhooks, compressed token detection, and smart fee estimation
             </p>
           </div>
 
@@ -206,7 +282,7 @@ export default function Landing() {
             {heliusFeatures.map((feature) => (
               <div
                 key={feature.title}
-                className="p-6 rounded-xl border border-[#fe5f00]/20 bg-[#fe5f00]/5 hover:border-[#fe5f00]/40 transition-colors"
+                className="p-6 rounded-xl border border-[#fe5f00]/20 bg-card hover:border-[#fe5f00]/40 transition-colors"
               >
                 <h3 className="font-semibold mb-2">{feature.title}</h3>
                 <p className="text-sm text-muted-foreground">{feature.description}</p>
@@ -217,7 +293,7 @@ export default function Landing() {
       </section>
 
       {/* FAQ */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-20 border-t border-border">
         <div className="container">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Frequently Asked Questions</h2>
@@ -274,7 +350,7 @@ export default function Landing() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Demo implementation. Not for production use.
+              Built with Light Protocol, Helius, and Solana
             </p>
           </div>
         </div>

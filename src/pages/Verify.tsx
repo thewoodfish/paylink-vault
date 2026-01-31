@@ -23,18 +23,19 @@ import { Badge } from '@/components/ui/badge';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Header } from '@/components/layout/Header';
 import { api } from '@/lib/api';
+import { isDemoMode } from '@/lib/mockData';
 import type { ReceiptProof, VerifyResponse } from '@/lib/types';
 import { toast } from 'sonner';
 
 const sampleProof: ReceiptProof = {
-  commitmentHash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-  disclosedFields: {
-    merchant: 'DemoMerchant1234567890abcdef',
+  commitment: '4f2a9b7c1b0d4c8f9a2e7b6d5c4f3e2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e',
+  nonce: '9f0e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a291817161514131211100f0e0d0c',
+  revealed: {
+    paylinkId: '00000000-0000-0000-0000-000000000000',
+    merchantPubkey: 'DemoMerchant1234567890abcdef',
     amount: 10,
-    token: 'SOL',
+    mint: 'So11111111111111111111111111111111111111112',
   },
-  signature: 'sig_abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567',
-  timestamp: Date.now(),
 };
 
 export default function Verify() {
@@ -56,6 +57,32 @@ export default function Verify() {
     }
   }, [searchParams]);
 
+  const verifyDemoProof = (proof: ReceiptProof): VerifyResponse => {
+    // In demo mode, we validate that the proof has the expected structure
+    // and return a successful verification with the revealed fields
+
+    const verifiedFields: string[] = [];
+    const revealed = proof.revealed || {};
+
+    // Check what fields are revealed
+    if (revealed.merchantPubkey) verifiedFields.push('Merchant');
+    if (revealed.amount !== undefined) verifiedFields.push('Amount');
+    if (revealed.mint) verifiedFields.push('Token');
+    if (revealed.timestamp) verifiedFields.push('Timestamp');
+    if (revealed.invoiceRef) verifiedFields.push('Invoice Reference');
+    if (revealed.paylinkId) verifiedFields.push('PayLink ID');
+
+    return {
+      valid: true,
+      verifiedFields,
+      signature: proof.revealed?.signature || 'demo-signature-' + Date.now(),
+      amount: revealed.amount,
+      token: revealed.mint,
+      merchant: revealed.merchantPubkey,
+      timestamp: revealed.timestamp,
+    };
+  };
+
   const handleVerify = async () => {
     setParseError(null);
     setResult(null);
@@ -73,15 +100,29 @@ export default function Verify() {
       return;
     }
 
-    if (!proof.commitmentHash || !proof.signature) {
-      setParseError('Missing required fields: commitmentHash, signature');
+    if (!(proof.commitment && proof.nonce) && !(proof.commitmentHash && proof.signature)) {
+      setParseError('Missing required fields: commitment+nonce (backend) or commitmentHash+signature (demo)');
       return;
     }
 
     setVerifying(true);
-    
+
+    // Demo mode: local verification
+    if (isDemoMode()) {
+      setTimeout(() => {
+        const demoResult = verifyDemoProof(proof);
+        setResult(demoResult);
+        if (demoResult.valid) {
+          toast.success('Demo proof verified successfully!');
+        }
+        setVerifying(false);
+      }, 1000); // Simulate API delay
+      return;
+    }
+
+    // Real mode: backend verification
     const response = await api.verifyReceipt({ proof });
-    
+
     if (response.error) {
       toast.error('Verification failed');
       setResult({
@@ -128,6 +169,23 @@ export default function Verify() {
             </p>
           </div>
 
+          {/* Demo Mode Banner */}
+          {isDemoMode() && (
+            <Card className="border-warning/30 bg-warning/5 mb-6">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 text-warning">ℹ️</div>
+                  <div>
+                    <p className="font-medium text-sm">Demo Mode - Local Verification</p>
+                    <p className="text-sm text-muted-foreground">
+                      Proofs are verified locally without cryptographic validation. In production, this uses the backend API with full ZK proof verification.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Input */}
             <Card>
@@ -143,10 +201,9 @@ export default function Verify() {
               <CardContent className="space-y-4">
                 <Textarea
                   placeholder={`{
-  "commitmentHash": "0x...",
-  "disclosedFields": { ... },
-  "signature": "sig_...",
-  "timestamp": 1234567890
+  "commitment": "...",
+  "nonce": "...",
+  "revealed": { "paylinkId": "...", "amount": 123 }
 }`}
                   value={proofJson}
                   onChange={(e) => {

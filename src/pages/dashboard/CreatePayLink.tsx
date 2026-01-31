@@ -31,6 +31,7 @@ import {
 import { QRCodeCard } from '@/components/ui/QRCodeCard';
 import { Identicon } from '@/components/ui/Identicon';
 import { PrivacyBadge } from '@/components/ui/PrivacyBadge';
+import { LightProtocolBadge, LightProtocolInfoCard } from '@/components/ui/LightProtocolBadge';
 import { api } from '@/lib/api';
 import { getMerchantPubkey } from '@/lib/merchant';
 import type { TokenType, ReceiptFieldPolicy } from '@/lib/types';
@@ -52,6 +53,7 @@ export default function CreatePayLink() {
     format(addDays(new Date(), 7), "yyyy-MM-dd'T'HH:mm")
   );
   const [invoiceRef, setInvoiceRef] = useState('');
+  const [privacyLevel, setPrivacyLevel] = useState<'standard' | 'enhanced' | 'maximum'>('enhanced');
   const [memoEnabled, setMemoEnabled] = useState(true);
   const [receiptFields, setReceiptFields] = useState<ReceiptFieldPolicy>({
     merchant: true,
@@ -72,7 +74,7 @@ export default function CreatePayLink() {
       return;
     }
     if (!merchantPubkey) {
-      toast.error('Please set your merchant public key first');
+      toast.error('Please connect your wallet first');
       return;
     }
 
@@ -84,6 +86,7 @@ export default function CreatePayLink() {
       tokenMint: token === 'custom' ? customMint : undefined,
       expiresAt: new Date(expiresAt).toISOString(),
       invoiceRef: invoiceRef || undefined,
+      privacyLevel,
       memoEnabled,
       receiptFields,
     });
@@ -246,6 +249,61 @@ export default function CreatePayLink() {
               />
             </div>
 
+            {/* Privacy Level */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                <Label>Privacy Level</Label>
+              </div>
+              <Select value={privacyLevel} onValueChange={(v) => setPrivacyLevel(v as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">
+                    <div className="flex items-center gap-2">
+                      <span>Standard - Light Protocol ZK</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="enhanced">
+                    <div className="flex items-center gap-2">
+                      <span>Enhanced - Light Protocol ZK Compression</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="maximum">
+                    <div className="flex items-center gap-2">
+                      <span>Maximum - Full ZK Privacy</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Privacy Level Description */}
+              <div className="text-sm text-muted-foreground space-y-1 bg-muted/30 rounded-lg p-3 border border-border/50">
+                {privacyLevel === 'standard' && (
+                  <>
+                    <p className="font-medium text-foreground">Compressed tokens + memo</p>
+                    <p>Light Protocol cost savings with PayLink ID matching. Best for easy reconciliation.</p>
+                  </>
+                )}
+                {privacyLevel === 'enhanced' && (
+                  <>
+                    <p className="font-medium text-foreground flex items-center gap-2">
+                      Compressed tokens, no memo
+                      <LightProtocolBadge enabled={true} variant="secondary" />
+                    </p>
+                    <p>Match via amount/recipient only. 99.7% cost savings with enhanced privacy.</p>
+                  </>
+                )}
+                {privacyLevel === 'maximum' && (
+                  <>
+                    <p className="font-medium text-foreground">Full ZK privacy</p>
+                    <p>Maximum ZK privacy with minimal on-chain footprint. Advanced privacy features.</p>
+                  </>
+                )}
+              </div>
+            </div>
+
             {/* Memo Policy */}
             <div className="flex items-center justify-between p-4 rounded-lg border border-border">
               <div>
@@ -300,11 +358,14 @@ export default function CreatePayLink() {
 
             {!merchantPubkey && (
               <p className="text-sm text-warning text-center">
-                ⚠️ Set your merchant public key in the header to create PayLinks
+                ⚠️ Connect your wallet in the header to create PayLinks
               </p>
             )}
           </CardContent>
         </Card>
+
+        {/* Light Protocol Info Card */}
+        <LightProtocolInfoCard className="mt-6" />
       </div>
 
       {/* Preview */}
@@ -338,7 +399,15 @@ export default function CreatePayLink() {
 
               {/* Privacy badge */}
               <div className="flex justify-center">
-                <PrivacyBadge level="selective" />
+                <LightProtocolBadge enabled={true} showDetails={true} />
+              </div>
+
+              {/* Cost Savings */}
+              <div className="text-center text-xs space-y-1">
+                <p className="text-success font-medium">Save 99.7% on rent</p>
+                <p className="text-muted-foreground">
+                  0.000005 SOL vs 0.002 SOL per account
+                </p>
               </div>
 
               {/* Meta */}
@@ -347,6 +416,13 @@ export default function CreatePayLink() {
                   Ref: {invoiceRef}
                 </p>
               )}
+
+              {/* Privacy Level */}
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground">
+                  Privacy: <span className="text-primary capitalize">{privacyLevel}</span>
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

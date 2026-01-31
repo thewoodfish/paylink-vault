@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
 import { api } from '@/lib/api';
 import { getMerchantPubkey } from '@/lib/merchant';
+import { mockReceipts, isDemoMode } from '@/lib/mockData';
 import type { Receipt as ReceiptType } from '@/lib/types';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -33,6 +34,15 @@ export default function ReceiptsList() {
   const fetchReceipts = async () => {
     setLoading(true);
     setError(null);
+
+    // Demo mode: use mock receipts
+    if (isDemoMode()) {
+      setTimeout(() => {
+        setReceipts(mockReceipts);
+        setLoading(false);
+      }, 500); // Simulate API delay
+      return;
+    }
 
     const merchantPubkey = getMerchantPubkey();
     const response = await api.getReceipts({ merchant: merchantPubkey });

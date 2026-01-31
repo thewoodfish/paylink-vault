@@ -39,8 +39,9 @@ export interface Receipt {
 }
 
 export interface ReceiptProof {
-  commitmentHash: string;
-  disclosedFields: Partial<{
+  // Legacy demo fields
+  commitmentHash?: string;
+  disclosedFields?: Partial<{
     merchant: string;
     amount: number;
     token: string;
@@ -48,8 +49,20 @@ export interface ReceiptProof {
     invoiceRef: string;
     paylinkId: string;
   }>;
-  signature: string;
-  timestamp: number;
+  signature?: string;
+  timestamp?: number;
+
+  // Backend verification fields
+  commitment?: string;
+  nonce?: string;
+  revealed?: Partial<{
+    paylinkId: string;
+    merchantPubkey: string;
+    amount: number;
+    mint: string;
+    slot: number;
+    invoiceRef: string;
+  }>;
 }
 
 export interface ActivityEvent {

@@ -11,122 +11,189 @@ import type {
   TokenType,
   ReceiptFieldPolicy,
 } from './types';
+import { getMerchantPubkey } from './merchant';
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
+const SOL_MINT = 'So11111111111111111111111111111111111111112';
 
-// Simulated delay for realistic UX
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const defaultReceiptFields: ReceiptFieldPolicy = {
+  merchant: true,
+  amount: true,
+  token: true,
+  timeWindow: false,
+  invoiceRef: false,
+  paylinkId: true,
+};
 
-// Mock data generators
-const generateMockPayLink = (id: string, overrides?: Partial<PayLink>): PayLink => ({
-  id,
-  merchantPubkey: localStorage.getItem('merchantPubkey') || 'DemoMerchant1234567890abcdef',
-  amount: Math.floor(Math.random() * 100) + 1,
-  token: ['SOL', 'USDC'][Math.floor(Math.random() * 2)] as TokenType,
-  status: ['pending', 'paid', 'expired'][Math.floor(Math.random() * 3)] as PayLinkStatus,
-  createdAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-  expiresAt: new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-  memoEnabled: true,
-  receiptFields: {
-    merchant: true,
-    amount: true,
-    token: true,
-    timeWindow: false,
-    invoiceRef: false,
-    paylinkId: true,
-  },
-  ...overrides,
-});
+const mapMintToToken = (mint: string): { token: TokenType; tokenMint?: string } => {
+  if (mint === 'SOL' || mint === SOL_MINT) {
+    return { token: 'SOL' };
+  }
+  if (mint.toUpperCase() === 'USDC') {
+    return { token: 'USDC' };
+  }
+  return { token: 'custom', tokenMint: mint };
+};
 
-const generateMockReceipt = (id: string, paylinkId: string): Receipt => ({
-  id,
-  commitmentHash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
-  paylinkId,
-  merchantPubkey: localStorage.getItem('merchantPubkey') || 'DemoMerchant1234567890abcdef',
-  issuedAt: new Date().toISOString(),
-  status: 'valid',
-  disclosedFields: {
-    merchant: true,
-    amount: true,
-    token: true,
-    timeWindow: false,
-    invoiceRef: false,
-    paylinkId: true,
-  },
-});
+const mapTokenToMint = (token: TokenType, tokenMint?: string): string => {
+  if (token === 'SOL') return SOL_MINT;
+  if (token === 'USDC') return 'USDC';
+  return tokenMint || 'CUSTOM';
+};
 
-const generateMockActivity = (paylinkId: string): ActivityEvent[] => [
-  {
-    id: `act_${Math.random().toString(36).slice(2)}`,
-    paylinkId,
-    type: 'created',
-    timestamp: new Date(Date.now() - 3600000).toISOString(),
-    details: 'PayLink created by merchant',
-  },
-  {
-    id: `act_${Math.random().toString(36).slice(2)}`,
-    paylinkId,
-    type: 'webhook_received',
-    timestamp: new Date(Date.now() - 1800000).toISOString(),
-    details: 'Helius webhook triggered',
-  },
-];
+const normalizeStatus = (status?: string): PayLinkStatus => {
+  if (status === 'paid') return 'paid';
+  if (status === 'expired') return 'expired';
+  if (status === 'cancelled') return 'cancelled';
+  return 'pending';
+};
 
-// API Client
+const mapPayLink = (p: any): PayLink => {
+  const { token, tokenMint } = mapMintToToken(p.mint || 'SOL');
+  return {
+    id: p.id,
+    merchantPubkey: p.merchantPubkey,
+    amount: p.expectedAmount ?? p.amount ?? 0,
+    token,
+    tokenMint,
+    status: normalizeStatus(p.status),
+    createdAt: p.createdAt,
+    expiresAt: p.expiresAt,
+    paidSignature: p.paidSignature ?? undefined,
+    invoiceRef: p.invoiceRef ?? undefined,
+    memoEnabled: true,
+    receiptFields: defaultReceiptFields,
+  };
+};
+
+const mapReceipt = (r: any): Receipt => {
+  const facts = r.facts || {};
+  const mint = facts.mint || 'SOL';
+  const { token } = mapMintToToken(mint);
+
+  return {
+    id: r.id,
+    commitmentHash: r.commitment,
+    paylinkId: r.paylinkId,
+    merchantPubkey: facts.merchantPubkey || 'Unknown',
+    issuedAt: r.issuedAt,
+    status: 'valid',
+    disclosedFields: defaultReceiptFields,
+    proofData: undefined,
+  };
+};
+
+const mapActivity = (e: any): ActivityEvent => {
+  const type = (() => {
+    switch (e.type) {
+      case 'PAYLINK_CREATED':
+        return 'created';
+      case 'WEBHOOK_RECEIVED':
+        return 'webhook_received';
+      case 'TX_VERIFIED_MATCH':
+        return 'verified';
+      case 'RECEIPT_ISSUED':
+        return 'receipt_issued';
+      case 'PAYLINK_MARKED_PAID':
+        return 'verified';
+      case 'PAYLINK_EXPIRED':
+        return 'expired';
+      default:
+        return 'created';
+    }
+  })();
+
+  let details: string | undefined = undefined;
+  if (e.detail) {
+    if (typeof e.detail === 'string') {
+      details = e.detail;
+    } else if (e.detail.reason) {
+      details = e.detail.reason;
+    } else {
+      details = JSON.stringify(e.detail);
+    }
+  }
+
+  return {
+    id: e.id?.toString() ?? `${e.type}-${e.at}`,
+    paylinkId: e.paylinkId,
+    type,
+    timestamp: e.at,
+    details,
+  };
+};
+
 class ApiClient {
   private async request<T>(
     endpoint: string,
     options?: RequestInit
   ): Promise<ApiResponse<T>> {
-    await delay(300 + Math.random() * 500);
-    
-    // Simulate occasional errors
-    if (Math.random() < 0.02) {
-      return { error: 'Network error. Please try again.', status: 500 };
+    const url = `${API_BASE}${endpoint}`;
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...(options?.headers || {}),
+    };
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
+
+      const text = await response.text();
+      let json: any = null;
+      if (text) {
+        try {
+          json = JSON.parse(text);
+        } catch {
+          json = null;
+        }
+      }
+
+      if (!response.ok) {
+        const error = json?.error || json?.message || text || 'Request failed';
+        return { error, status: response.status };
+      }
+
+      return { data: json as T, status: response.status };
+    } catch (err) {
+      return { error: (err as Error).message, status: 0 };
     }
-    
-    return { data: undefined as T, status: 200 };
   }
 
-  // PayLinks
   async getPayLinks(params?: {
     status?: PayLinkStatus;
     token?: TokenType;
     q?: string;
     page?: number;
   }): Promise<ApiResponse<PaginatedResponse<PayLink>>> {
-    await delay(400);
-    
-    const mockPayLinks = Array.from({ length: 10 }, (_, i) =>
-      generateMockPayLink(`pl_${Math.random().toString(36).slice(2)}`)
-    );
-    
-    let filtered = mockPayLinks;
-    if (params?.status && params.status !== 'pending') {
-      filtered = filtered.filter(p => p.status === params.status);
+    const search = new URLSearchParams();
+    if (params?.status) search.set('status', params.status);
+    if (params?.token && params.token !== 'custom') {
+      search.set('token', mapTokenToMint(params.token));
     }
-    if (params?.token) {
-      filtered = filtered.filter(p => p.token === params.token);
-    }
-    
+    if (params?.q) search.set('q', params.q);
+    if (params?.page) search.set('page', params.page.toString());
+
+    const res = await this.request<any>(`/paylinks?${search.toString()}`);
+    if (res.error || !res.data) return res as ApiResponse<PaginatedResponse<PayLink>>;
+
     return {
+      status: res.status,
       data: {
-        items: filtered,
-        total: filtered.length,
-        page: params?.page || 1,
-        pageSize: 10,
-        hasMore: false,
+        items: res.data.items.map(mapPayLink),
+        total: res.data.total,
+        page: res.data.page,
+        pageSize: res.data.pageSize,
+        hasMore: res.data.page * res.data.pageSize < res.data.total,
       },
-      status: 200,
     };
   }
 
   async getPayLink(id: string): Promise<ApiResponse<PayLink>> {
-    await delay(300);
-    return {
-      data: generateMockPayLink(id),
-      status: 200,
-    };
+    const res = await this.request<any>(`/paylinks/${id}`);
+    if (res.error || !res.data) return res as ApiResponse<PayLink>;
+    return { status: res.status, data: mapPayLink(res.data.paylink) };
   }
 
   async createPayLink(data: {
@@ -135,125 +202,177 @@ class ApiClient {
     tokenMint?: string;
     expiresAt: string;
     invoiceRef?: string;
+    privacyLevel?: 'standard' | 'enhanced' | 'maximum';
     memoEnabled: boolean;
     receiptFields: ReceiptFieldPolicy;
   }): Promise<ApiResponse<PayLink>> {
-    await delay(600);
-    const id = `pl_${Math.random().toString(36).slice(2)}`;
-    return {
-      data: generateMockPayLink(id, {
-        ...data,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      }),
-      status: 201,
+    const merchantPubkey = getMerchantPubkey();
+    const mint = mapTokenToMint(data.token, data.tokenMint);
+
+    const payload = {
+      merchantPubkey,
+      expectedAmount: Math.round(data.amount),
+      mint,
+      expiresAt: data.expiresAt,
+      invoiceRef: data.invoiceRef,
+      privacyLevel: data.privacyLevel || 'enhanced',
+      memoPolicy: {
+        enabled: data.memoEnabled,
+        template: 'paylink:{id}',
+      },
+      receiptFieldsPolicy: {
+        merchant: data.receiptFields.merchant,
+        amount: data.receiptFields.amount,
+        token: data.receiptFields.token,
+        timeWindow: data.receiptFields.timeWindow,
+        invoiceRef: data.receiptFields.invoiceRef,
+        paylinkId: data.receiptFields.paylinkId,
+      },
     };
+
+    const res = await this.request<any>(`/paylinks`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    if (res.error || !res.data) return res as ApiResponse<PayLink>;
+
+    return { status: res.status, data: mapPayLink(res.data.paylink) };
   }
 
   async cancelPayLink(id: string): Promise<ApiResponse<PayLink>> {
-    await delay(400);
     return {
-      data: generateMockPayLink(id, { status: 'cancelled' }),
-      status: 200,
+      status: 400,
+      error: 'Cancel is not supported by the backend API',
     };
   }
 
   async getPayLinkActivity(id: string): Promise<ApiResponse<ActivityEvent[]>> {
-    await delay(300);
-    return {
-      data: generateMockActivity(id),
-      status: 200,
-    };
+    const res = await this.request<any>(`/paylinks/${id}/activity`);
+    if (res.error || !res.data) return res as ApiResponse<ActivityEvent[]>;
+    return { status: res.status, data: res.data.events.map(mapActivity) };
   }
 
   async getPayLinkReceipts(id: string): Promise<ApiResponse<Receipt[]>> {
-    await delay(300);
-    return {
-      data: [generateMockReceipt(`rcpt_${Math.random().toString(36).slice(2)}`, id)],
-      status: 200,
-    };
+    const res = await this.request<any>(`/paylinks/${id}/receipts`);
+    if (res.error || !res.data) return res as ApiResponse<Receipt[]>;
+
+    const items = res.data.items.map((r: any) => ({
+      id: r.id,
+      commitmentHash: r.commitment,
+      paylinkId: r.paylinkId,
+      merchantPubkey: 'Unknown',
+      issuedAt: r.issuedAt,
+      status: 'valid' as const,
+      disclosedFields: defaultReceiptFields,
+    }));
+
+    return { status: res.status, data: items };
   }
 
-  // Receipts
   async getReceipts(params?: {
     merchant?: string;
     paylinkId?: string;
     page?: number;
   }): Promise<ApiResponse<PaginatedResponse<Receipt>>> {
-    await delay(400);
-    
-    const receipts = Array.from({ length: 5 }, (_, i) =>
-      generateMockReceipt(
-        `rcpt_${Math.random().toString(36).slice(2)}`,
-        `pl_${Math.random().toString(36).slice(2)}`
-      )
-    );
-    
+    const search = new URLSearchParams();
+    if (params?.merchant) search.set('merchant', params.merchant);
+    if (params?.page) search.set('page', params.page.toString());
+
+    const res = await this.request<any>(`/receipts?${search.toString()}`);
+    if (res.error || !res.data) return res as ApiResponse<PaginatedResponse<Receipt>>;
+
     return {
+      status: res.status,
       data: {
-        items: receipts,
-        total: receipts.length,
-        page: params?.page || 1,
-        pageSize: 10,
-        hasMore: false,
+        items: res.data.items.map(mapReceipt),
+        total: res.data.total,
+        page: res.data.page,
+        pageSize: res.data.pageSize,
+        hasMore: res.data.page * res.data.pageSize < res.data.total,
       },
-      status: 200,
     };
   }
 
   async getReceipt(id: string): Promise<ApiResponse<Receipt>> {
-    await delay(300);
-    return {
-      data: generateMockReceipt(id, `pl_${Math.random().toString(36).slice(2)}`),
-      status: 200,
-    };
+    const res = await this.request<any>(`/receipts/${id}`);
+    if (res.error || !res.data) return res as ApiResponse<Receipt>;
+    return { status: res.status, data: mapReceipt(res.data.receipt) };
+  }
+
+  async getReceiptProof(
+    id: string,
+    disclosed: ReceiptFieldPolicy
+  ): Promise<ApiResponse<{ proof: any }>> {
+    const res = await this.request<any>(`/receipts/${id}/proof`, {
+      method: 'POST',
+      body: JSON.stringify({ disclosed }),
+    });
+    if (res.error || !res.data) return res as ApiResponse<{ proof: any }>;
+    return { status: res.status, data: res.data };
   }
 
   async verifyReceipt(request: VerifyRequest): Promise<ApiResponse<VerifyResponse>> {
-    await delay(800);
-    
-    const fields = Object.entries(request.proof.disclosedFields)
-      .filter(([_, v]) => v !== undefined)
-      .map(([k]) => k);
-    
+    const proof: any = request.proof;
+    let payload: any = null;
+
+    if (proof && proof.commitment && proof.nonce) {
+      payload = {
+        proof: {
+          commitment: proof.commitment,
+          nonce: proof.nonce,
+          revealed: proof.revealed || {},
+        },
+      };
+    } else {
+      return {
+        status: 400,
+        error: 'Proof must include commitment and nonce for verification',
+      };
+    }
+
+    const res = await this.request<any>(`/receipts/verify`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    if (res.error || !res.data) return res as ApiResponse<VerifyResponse>;
+
     return {
+      status: res.status,
       data: {
-        valid: true,
-        verifiedFields: fields,
-        signature: request.proof.signature,
-        paylinkStatus: 'paid',
+        valid: res.data.verified,
+        verifiedFields: res.data.details?.matchedFields || [],
+        signature: res.data.details?.paidSignature,
+        paylinkStatus: res.data.verified ? 'paid' : undefined,
+        mismatches: res.data.verified ? [] : [res.data.reason],
       },
-      status: 200,
     };
   }
 
-  // Fees
   async getPriorityFeeEstimate(): Promise<ApiResponse<FeeEstimate>> {
-    await delay(500);
+    const res = await this.request<any>(`/fees/priority-estimate`, {
+      method: 'POST',
+      body: JSON.stringify({ level: 'medium' }),
+    });
+    if (res.error || !res.data) return res as ApiResponse<FeeEstimate>;
+
+    const levels = res.data.levels || { low: 1000, medium: 2000, high: 5000 };
     return {
+      status: res.status,
       data: {
-        low: 5000,
-        medium: 25000,
-        high: 100000,
+        low: levels.low,
+        medium: levels.medium,
+        high: levels.high,
         unit: 'lamports',
       },
-      status: 200,
     };
   }
 
-  // Simulated payment (UI only)
   async simulatePayment(paylinkId: string): Promise<ApiResponse<{ signature: string }>> {
-    await delay(2000);
-    return {
-      data: {
-        signature: Array.from({ length: 88 }, () =>
-          'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[
-            Math.floor(Math.random() * 62)
-          ]
-        ).join(''),
-      },
-      status: 200,
-    };
+    const res = await this.request<any>(`/paylinks/${paylinkId}/simulate`, {
+      method: 'POST',
+    });
+    if (res.error || !res.data) return res as ApiResponse<{ signature: string }>;
+    return { status: res.status, data: res.data };
   }
 }
 
