@@ -14,9 +14,26 @@ RUN cargo build --release
 
 FROM debian:bookworm-slim
 WORKDIR /app
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /app/target/release/receiptless-backend /app/receiptless-backend
 COPY migrations ./migrations
+
+# Make binary executable
+RUN chmod +x /app/receiptless-backend
+
+# Disable output buffering for immediate logs
 ENV RUST_LOG=info
+ENV RUST_BACKTRACE=1
+
 EXPOSE 8080
-CMD ["/app/receiptless-backend"]
+
+# Run with shell to ensure output is captured
+CMD ["/bin/sh", "-c", "echo 'Container starting...' && /app/receiptless-backend"]
