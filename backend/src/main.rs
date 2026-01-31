@@ -43,10 +43,7 @@ async fn main() -> Result<(), error::AppError> {
         })?;
 
     println!("✅ HTTP SERVER IS LISTENING on {}", addr);
-    println!("   Health check endpoint: http://{}:{}/health",
-        if addr.ip().is_unspecified() { "0.0.0.0" } else { &addr.ip().to_string() },
-        addr.port()
-    );
+    println!("   Health check endpoint: http://0.0.0.0:{}/health", addr.port());
 
     // Now try DB connection (after server is already running)
     println!("🔌 Now attempting database connection...");
