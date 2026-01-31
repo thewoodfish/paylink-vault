@@ -267,33 +267,6 @@ npm run dev  # Frontend (port 8080)
 
 ---
 
-## 🎯 Why This Wins
-
-### Innovation ⭐⭐⭐⭐⭐
-- **First selective disclosure receipt system on Solana**
-- Novel architecture combining Light Protocol + Helius + cryptographic commitments
-- Pluggable privacy rails (easy to extend with new ZK systems)
-
-### Technical Excellence ⭐⭐⭐⭐⭐
-- Full-stack production code (not a prototype)
-- Real Light Protocol SDK integration (working code, not just concept)
-- Comprehensive error handling, security, database design
-- Type-safe Rust + TypeScript
-
-### Real-World Impact ⭐⭐⭐⭐⭐
-- Solves actual merchant privacy problems
-- 99.7% cost savings = economically viable
-- Works today on devnet, ready for mainnet
-- Use cases: freelancers, e-commerce, B2B payments
-
-### Ecosystem Contribution ⭐⭐⭐⭐⭐
-- New privacy primitive for Solana
-- Demonstrates Light Protocol's full potential
-- Shows Helius as privacy infrastructure
-- Open-source, extensible architecture
-
----
-
 ## 📈 Business Model
 
 ### Target Users
